@@ -8,15 +8,23 @@ This document contains changes to the insert/extraction process in previous vers
 * In the previous version, Forensic-Watermarking-program-for-image, during the insertion/extraction process, **Chinese rest theorem (CRT)** is applied to ensure security.
 
 # [Original] Development enviroment
+
 **Development Tools**: VisualStudio 2017
+
 **Development Language**: C++
+
 **Libraries used**: MFC, OpenCV
+
 **Developers**: 4 (Team Project)
+
 **Development Period**: July 2019 ~ October 2019
 
 # [mrbsvf] Development enviroment
+
 **Development Tools**: VisualStudio 2022
+
 **Development Language**: C++
+
 **Libraries used**: MFC, OpenCV
 
 # Implement      
@@ -35,6 +43,7 @@ This document contains changes to the insert/extraction process in previous vers
 
 * **Discrete wavelet transform(DWT)**: Binary wavelet transform is performed on the Y channel of the image obtained through color conversion to transform from the spatial domain to the frequency domain and insert. Through this, the image expressed by the pixel values ​​of the two-dimensional array is converted into an image expressed by the amount of change in the pixel values ​​of the two-dimensional array. That is, it is expressed as the amount of change in values ​​between adjacent pixels based on the position of a specific pixel. In addition, in the case of DWT, unlike general frequency conversion that includes only frequency (pixel value change) resolution, since it includes frequency resolution and resolution for the spatial domain (pixel value, corresponding location) to be converted, pixels at a specific location in the original image. The amount of change in values ​​can be expressed simultaneously.
 ![DWT](https://user-images.githubusercontent.com/13462458/74600613-57d52a80-50d7-11ea-9aa1-c079f1cd222b.PNG)
+
 As a result of DWT, four subbands LL, LH, HL, and HH can be obtained.     
 
 **The meaning of frequency in the image can be expressed as the amount of change in the pixel value. In the case of low frequencies, the amount of change in pixel values ​​is small, which is close to the background, and in the case of high frequencies, the amount of change in pixel values ​​is large and close to the boundary line.**
@@ -48,10 +57,14 @@ A horizontal border line appears.
 A diagonal boundary line appears.
 **The change of low frequency representing the background has a great effect on the image quality and the human eye. On the other hand, since the change of high frequency that represents the boundary does not significantly affect the image quality and the human eye, select the HL, LH, and HH bands that include the high frequency region and proceed with insertion.**
 
-* **Discrete cosine transform(DCT)**: DCT is performed once again on the image expressed as pixel value change through the previous DWT step. An image expressed as a pixel value change amount is an image indicating a boundary line of the corresponding image. A frequency band to be inserted can be selected in detail by performing DCT having only a frequency resolution on an image focused on the boundary line. ** That is, the edge included in the original image is expressed primarily through the DWT having resolution in the spatial and frequency domains, and the frequency included in the DWT result secondarily through the DCT having the resolution in the frequency domain Separately express the components.**
+* **Discrete cosine transform(DCT)**: DCT is performed once again on the image expressed as pixel value change through the previous DWT step. An image expressed as a pixel value change amount is an image indicating a boundary line of the corresponding image. A frequency band to be inserted can be selected in detail by performing DCT having only a frequency resolution on an image focused on the boundary line. ** That is, the edge included in the original image is expressed primarily through the DWT having resolution in the spatial and frequency domains, and the frequency included in the DWT result secondarily through the DCT having the resolution in the frequency domain Separately express the components.
+
 ![8x8](https://user-images.githubusercontent.com/13462458/75420337-3697f800-597b-11ea-9444-1daac46867dc.png)
+
 In accordance with the JPEG compression method, the project proceeds with block DCT, which performs DCT on 8x8 matrix blocks for speed advantage.
+
 ![DCT](https://user-images.githubusercontent.com/13462458/75419072-5aa60a00-5978-11ea-880b-df220721796e.png)
+
 DCT result has an expression range from low frequency component value **(DC value)** at position 0,0 to high frequency component value at position 7 and 7 **(AC value)**. As the position increases in the row and column directions from the value of the 0,0 position, the expressed frequency also changes from low frequency to high frequency. **JPEG compression reduces the amount of data and compresses the DCT result by changing the low frequency value that has a big impact on the human eye and changing the high frequency value with insignificant effect to a small amount. Therefore, the watermark pixel value is inserted into the DC value of the block DCT result for the original image.** Since a 32x32 watermark has 1024 pixel values, the watermark is added to each DC value of the 1024 block DCT result for the original image. Watermark insertion is completed by inserting mark pixel values.  
      
 * **The extraction process is the reverse of the embedding process, and the watermark is restored by referring to the DC value through color conversion, DWT, and DCT.**
@@ -63,6 +76,7 @@ DCT result has an expression range from low frequency component value **(DC valu
      
          
 **Table of quantitative figures for validation of results**
+
 ![ver1 result](https://user-images.githubusercontent.com/13462458/76498408-29513200-6480-11ea-99de-0c21b545d447.png)
      
      
