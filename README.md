@@ -1,50 +1,115 @@
 # Forensic-Watermarking-program-for-image-CRT
-해당 문서는 이전 버전의 프로그램에서 변경된 삽입/추출 과정에 대한 내용을 포함합니다.    
-* 전반적인 프로그램에 대한 내용은 https://github.com/ms4935/Forensic-Watermarking-program-for-image를 참고하시기 바랍니다.
+This document contains changes to the insert/extraction process in previous versions of the program. 
+* For more information about the overall program, please refer to https://github.com/ms4935/Forensic-Watermarking-program-for-image.
 
 # Development contents     
-**이미지 기반의 다양한 창작물들에 대하여 불법 복제와 유통이 성행하는 현재, 기존의 워터마크 활용 방식을 확장하여 이를 추적하는데 기여하는 포렌식 워터마킹 프로그램 제작을 목표로 한다.**    
+**In the current era of illegal copying and distribution of various image-based creative works, we aim to produce a forensic watermarking program that contributes to tracking by expanding the existing watermark application method.** 
 
-* 이전 버전인 Forensic-Watermarking-program-for-image에서 삽입/추출 과정에서 **보안성 확보를 위해 중국인의 나머지 정리(CRT)** 를 적용한 버전이다.
+* In the previous version, Forensic-Watermarking-program-for-image, during the insertion/extraction process, **Chinese rest theorem (CRT)** is applied to ensure security.
 
-# Development enviroment
-**개발 도구**: VisualStudio 2017   
-**개발 언어**: C++   
-**사용 라이브러리**: MFC, OpenCV   
-**개발 인원**: 4명(팀 프로젝트)    
-**개발 기간**: 2019년 7월 ~ 2019년 10월
+# [Original] Development enviroment
+**Development Tools**: VisualStudio 2017
+**Development Language**: C++
+**Libraries used**: MFC, OpenCV
+**Developers**: 4 (Team Project)
+**Development Period**: July 2019 ~ October 2019
+
+# [mrbsvf] Development enviroment
+**Development Tools**: VisualStudio 2022
+**Development Language**: C++
+**Libraries used**: MFC, OpenCV
 
 # Implement      
-* **중국인의 나머지 정리(CRT)**: 
+* **Chinese remainder theorem (CRT)**
 
+* **Color Conversion**: Converts image color channels in RGB format to YUV color channels. Y is the image luminance, and U and V are the image chrominance signals. In JPEG compression, the data of the U and V channels, which the human eye is most insensitive to changes, is removed. Therefore, in the process of inverse conversion of the YUV color channel to RGB format in the last step, the Y channel, which is not removed during compression, is inserted, and JPEG is targeted for the Y channel to minimize the change due to lossy compression to the Y channel. Insertion proceeds according to the compression method.
+    
+    
+![yuv](https://user-images.githubusercontent.com/13462458/76728631-a3dcc300-679a-11ea-944b-1e720331a0a1.PNG)
+      
+**QR code**
+* Converts input information (string) into QR code using open source. In consideration of the JPEG compression method in the implementation of the embedding algorithm, downsampling of DWT, etc., it is converted to version 1-3 QR code so as not to exceed the watermark size of 32x32 size.
 
+**Insert/Extract Algorithms**
+* In general, the watermark embedding method is divided into spatial domain insertion and frequency domain insertion. In order to secure the project goals of invisibility and JPEG compression robustness, the implementation proceeds with the frequency domain insertion method.
 
-# Result    
-**Lena 이미지를 대상으로 한 결과 예시**    
+* **Discrete wavelet transform(DWT)**: Binary wavelet transform is performed on the Y channel of the image obtained through color conversion to transform from the spatial domain to the frequency domain and insert. Through this, the image expressed by the pixel values ​​of the two-dimensional array is converted into an image expressed by the amount of change in the pixel values ​​of the two-dimensional array. That is, it is expressed as the amount of change in values ​​between adjacent pixels based on the position of a specific pixel. In addition, in the case of DWT, unlike general frequency conversion that includes only frequency (pixel value change) resolution, since it includes frequency resolution and resolution for the spatial domain (pixel value, corresponding location) to be converted, pixels at a specific location in the original image. The amount of change in values ​​can be expressed simultaneously.
+![DWT](https://user-images.githubusercontent.com/13462458/74600613-57d52a80-50d7-11ea-9aa1-c079f1cd222b.PNG)
+As a result of DWT, four subbands LL, LH, HL, and HH can be obtained.     
+
+**The meaning of frequency in the image can be expressed as the amount of change in the pixel value. In the case of low frequencies, the amount of change in pixel values ​​is small, which is close to the background, and in the case of high frequencies, the amount of change in pixel values ​​is large and close to the boundary line.**
+**Upper left** is the LL subband, which is equivalent to applying a low-pass filter in the horizontal and vertical directions to the original image.
+(It is expressed as a high value because it does not go through the normalization process.)
+**Top right** is the HL subband, which is equivalent to applying a high-pass filter in the vertical direction to the original image.
+A vertical boundary line appears.
+**Lower left** is the LH subband, which is equivalent to applying a high-pass filter in the horizontal direction to the original image.
+A horizontal border line appears.
+**Bottom right** is the HH subband, which is equivalent to applying a high-pass filter in the horizontal and vertical directions to the original image.
+A diagonal boundary line appears.
+**The change of low frequency representing the background has a great effect on the image quality and the human eye. On the other hand, since the change of high frequency that represents the boundary does not significantly affect the image quality and the human eye, select the HL, LH, and HH bands that include the high frequency region and proceed with insertion.**
+
+* **Discrete cosine transform(DCT)**: DCT is performed once again on the image expressed as pixel value change through the previous DWT step. An image expressed as a pixel value change amount is an image indicating a boundary line of the corresponding image. A frequency band to be inserted can be selected in detail by performing DCT having only a frequency resolution on an image focused on the boundary line. ** That is, the edge included in the original image is expressed primarily through the DWT having resolution in the spatial and frequency domains, and the frequency included in the DWT result secondarily through the DCT having the resolution in the frequency domain Separately express the components.**
+![8x8](https://user-images.githubusercontent.com/13462458/75420337-3697f800-597b-11ea-9444-1daac46867dc.png)
+In accordance with the JPEG compression method, the project proceeds with block DCT, which performs DCT on 8x8 matrix blocks for speed advantage.
+![DCT](https://user-images.githubusercontent.com/13462458/75419072-5aa60a00-5978-11ea-880b-df220721796e.png)
+DCT result has an expression range from low frequency component value **(DC value)** at position 0,0 to high frequency component value at position 7 and 7 **(AC value)**. As the position increases in the row and column directions from the value of the 0,0 position, the expressed frequency also changes from low frequency to high frequency. **JPEG compression reduces the amount of data and compresses the DCT result by changing the low frequency value that has a big impact on the human eye and changing the high frequency value with insignificant effect to a small amount. Therefore, the watermark pixel value is inserted into the DC value of the block DCT result for the original image.** Since a 32x32 watermark has 1024 pixel values, the watermark is added to each DC value of the 1024 block DCT result for the original image. Watermark insertion is completed by inserting mark pixel values.  
      
+* **The extraction process is the reverse of the embedding process, and the watermark is restored by referring to the DC value through color conversion, DWT, and DCT.**
 
+# Result
+**Example results for Lena images**
+     
+![Lena_Result Screen](https://user-images.githubusercontent.com/13462458/76683089-9e6d6480-6644-11ea-9bef-5c0a05f34e7a.PNG)
      
          
-**결과 검증을 위한 정량적 수치 표**  
+**Table of quantitative figures for validation of results**
+![ver1 result](https://user-images.githubusercontent.com/13462458/76498408-29513200-6480-11ea-99de-0c21b545d447.png)
      
      
-     
-* **PSNR(최대 신호 대 잡음비)**: 영상 또는 동영상 손실 압축에서 화질 손실 정보를 평가할 때 사용된다. 손실이 적을수록 높은 값을 가진다.(통상적으로 30db 이상의 영상은 인간의 시각 특성상 차이를 눈으로 구분하기 쉽지 않다.)      
+* **PSNR (Maximum Signal-to-Noise Ratio)**: Used to evaluate image quality loss information in video or video lossy compression. The smaller the loss, the higher the value.
 
-* **NCC(정규화 상호 관계)**: 두 이미지 간의 유사도를 수치적으로 나타낸다.(1에 가까울수록 높은 유사도를 가진다.)      
+* **NCC (Normalized Correlation)**: Numerically represents the similarity between two images. (The closer to 1, the higher the similarity.)
 
-**제한사항**    
-* **원본 이미지의 최소 크기 제한**: 삽입 워터마크의 기준 크기를 32x32로 설정했기 때문에 **원본 이미지의 크기는 가로, 세로 크기 모두 최소 512 이상**을 만족해야한다.    
-32x32 워터마크는 총 1024개의 픽셀로 구성된다. 이때, DWT 결과 부대역의 블럭 DCT 결과 8x8 블럭에 1개의 워터마크 픽셀이 삽입된다. 부대역 이미지의 블럭 DCT 결과인 8x8 블럭이 총 32x32개 즉, 1024개가 필요하기 때문에 DCT를 진행하는 **부대역 이미지는 256x256 크기를 만족해야한다**.(8x32 = 512) 따라서, 256x256 크기의 4개 부대역으로 분해되는 원본 이미지는 512x512 크기를 만족해야한다.    
+**Demonstration video**
+* Link to video demonstrating insertion/extraction program using MFC: https://youtu.be/cv6PpEdTOOw
+* Link to demonstration video applying image download web: https://youtu.be/cDcwHMWT5zo
 
-* **3개의 부대역 삽입 진행**: 해당 알고리즘은 원본 이미지에 대한 DWT 결과의 4개 부대역 중 HL, LH, HH 3개 부대역에 모두 삽입을 진행한다. 각 부대역은 원본 이미지에 포함된 주파수를 각 대역별로 분할하여 나타낸다. 이런 3개의 부대역 모두에 워터마크 비트를 삽입한다는 것은 원본 이미지를 표현하는 **주파수 대역의 3/4에 삽입하는 것으로 데이터 변화가 많이 일어난다. 데이터 변화가 많을수록 삽입된 이미지는 원본 이미지와 차이가 나며 이미지 화질의 저하를 야기한다.**     
+**Restrictions**
+* **Restriction on the minimum size of the original image**: Because the standard size of the embedded watermark is set to 32x32, the size of the original image must satisfy at least 512 in both the horizontal and vertical size**.
+A 32x32 watermark consists of a total of 1024 pixels. At this time, one watermark pixel is inserted into the 8x8 block of the block DCT result of the DWT result subband. Since a total of 32x32, that is, 1024 blocks of 8x8 blocks, which is the result of block DCT of the subband image, are needed, **subband image for DCT must satisfy the size of 256x256**. (8x32 = 512) Therefore, the size of 256x256 is The original image decomposed into 4 subbands must satisfy the size of 512x512.
 
-* **특정 패턴의 압축 이미지에서 추출 불가**: 저주파, 고주파 성분이 적절히 분포된 일반적인 이미지 외에 한쪽으로 치우쳐진 특정 패턴을 가진 이미지의 경우 JPEG 압축을 거친 후 추출이 불가하다. **즉, 특정 패턴을 가진 이미지를 대상으로 JPEG 압축 강인성을 확보하지 못한다.** 
+* **3 subband insertion progress**: The algorithm proceeds to insert into all 3 subbands HL, LH, and HH among the 4 subbands of the DWT result for the original image. Each subband is represented by dividing a frequency included in the original image for each band. Inserting the watermark bit in all three subbands means inserting the watermark bit into 3/4 of the **frequency band representing the original image, and data changes occur a lot. The more the data changes, the more the inserted image differs from the original image, and the lower the image quality.** 
 
-**향후 발전과제**    
-* **원본 이미지의 최소 크기 제한 해결 방안**: 워터마크로 사용되는 QR 코드의 구성 버전을 확인하여 **32x32 크기보다 작은 워터마크를 사용**하는 방법, 8x8 블럭 DCT보다 **작은 범위의 블럭 DCT**를 사용하는 방법, 8x8 블럭 DCT의 결과에 **두 개의 워터마크 픽셀 값(비트)를 삽입**하는 방법들을 고려해본다.    
+* **Lack of security**: Because it is blind watermarking that does not require the original image to extract the watermark from the embedded image,
+The insertion method that simply changes the DC value according to the watermark pixel value can be easily removed by attackers.
+
+* **Cannot extract from compressed images of a specific pattern**: In the case of an image with a specific pattern skewed to one side other than a general image with properly distributed low-frequency and high-frequency components, it cannot be extracted after JPEG compression. **In other words, JPEG compression robustness cannot be secured for images with specific patterns.**
+
+**Future development tasks**
+* **Solution of the minimum size limitation of the original image**: How to use a watermark smaller than 32x32 size by checking the configuration version of the QR code used as the watermark, **smaller than the 8x8 block DCT Consider using a block DCT**, inserting two watermark pixel values ​​(bits) into the result of an 8x8 block DCT.
     
-* **3개의 부대역 삽입 진행 해결 방안**: 원본 이미지에 대한 영상 분석을 진행하여 HL, LH, HH 부대역 중 원본 이미지 표현에 가장 많은 값을 포함하는 부대역을 선택하여 **단일 삽입**을 진행하는 방법을 고려해본다.    
-(이미지 표현에 적은 값을 포함하는 부대역에 삽입을 진행하는 경우 작은 값에 대한 변화가 결과에 큰 영향을 미친다. 하지만, 많은 값을 포함하는 부대역에 삽입을 진행하는 경우 큰 값에 대한 변화를 진행하여 이전과 큰 차이가 없으므로 결과에 작은 영향을 미친다.)     
+* **Solution for inserting three subbands**: Perform image analysis on the original image and select the subband that contains the most values ​​in the original image representation among HL, LH, and HH subbands **Single insertion **Consider how to proceed.
+(When inserting into a subband containing a small number of values ​​in the image representation, a change for a small value has a large effect on the result. However, when inserting into a subband containing a large number of values, a change for a large value There is no big difference from before, so it has a small effect on the result.)
 
-* **특정 패턴의 압축 이미지에서 추출 불가**: **3개의 부대역 삽입 진행 해결 방안**과 마찬가지로 원본 이미지에 대한 영상 분석을 통해 이미지의 저주파, 고주파 특징을 분석하고 특정 패턴에 대한 삽입/추출 방식을 달리 한다. 또한, DC 값에 대한 삽입 외에도 AC 값에 가중치를 더하여 삽입하는 등 원본 이미지 특징에 따라 그 방식을 달리한다.
+* **Solution for lack of security**: A method of changing the DC value through an elaborate quantization step** in the step of inserting a watermark bit, a method of applying **Singular value decomposition (SVD)** , consider applying the **Chinese remainder theorem (CRT)**.
+     
+     
+* **PSNR (Maximum Signal-to-Noise Ratio)**: Used to evaluate image quality loss information in video or video lossy compression. The smaller the loss, the higher the value.
+
+* **NCC (Normalized Correlation)**: Numerically represents the similarity between two images. (The closer to 1, the higher the similarity.)
+
+**Restrictions**
+* **Restriction on the minimum size of the original image**: Because the standard size of the embedded watermark is set to 32x32, the size of the original image must satisfy at least 512 in both the horizontal and vertical size**.
+A 32x32 watermark consists of a total of 1024 pixels. At this time, one watermark pixel is inserted into the 8x8 block of the block DCT result of the DWT result subband. Since a total of 32x32, that is, 1024 blocks of 8x8 blocks, which is the result of block DCT of the subband image, are needed, **subband image for DCT must satisfy the size of 256x256**. (8x32 = 512) Therefore, the size of 256x256 is The original image decomposed into 4 subbands must satisfy the size of 512x512.
+
+* **3 subband insertion progress**: The algorithm proceeds to insert into all 3 subbands HL, LH, and HH among the 4 subbands of the DWT result for the original image. Each subband is represented by dividing a frequency included in the original image for each band. Inserting the watermark bit in all three subbands means inserting the watermark bit into 3/4 of the **frequency band representing the original image, and data changes occur a lot. The more the data changes, the more the inserted image differs from the original image, and the lower the image quality.**
+
+* **Cannot extract from compressed images of a specific pattern**: In the case of an image with a specific pattern skewed to one side other than a general image in which low and high frequency components are properly distributed, it cannot be extracted after JPEG compression. **In other words, JPEG compression robustness cannot be secured for images with specific patterns.**
+
+**Future development tasks**
+* **Solution of the minimum size limitation of the original image**: How to use a watermark smaller than 32x32 size by checking the configuration version of the QR code used as the watermark, **smaller than the 8x8 block DCT Consider using a block DCT**, inserting two watermark pixel values ​​(bits) into the result of an 8x8 block DCT.
+    
+* **Solution for inserting three subbands**: Perform image analysis on the original image and select the subband that contains the most values ​​in the original image representation among HL, LH, and HH subbands **Single insertion **Consider how to proceed.
+(When inserting into a subband containing a small number of values ​​in the image representation, a change for a small value has a large effect on the result. However, when inserting into a subband containing a large number of values, a change for a large value There is no big difference from before, so it has a small effect on the result.)
+
+* **Cannot extract from compressed image of a specific pattern**: As with **3 subband insertion progress solution**, the low-frequency and high-frequency features of the image are analyzed through image analysis of the original image, and insertion into a specific pattern is performed. /Change the extraction method. In addition, the method is different according to the characteristics of the original image, such as adding weight to the AC value in addition to inserting the DC value.
