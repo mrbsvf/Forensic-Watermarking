@@ -1,6 +1,5 @@
 # Forensic-Watermarking-program-for-image-CRT
-This document contains changes to the insert/extraction process in previous versions of the program. 
-* For more information about the overall program, please refer to https://github.com/ms4935/Forensic-Watermarking-program-for-image.
+This document contains changes to the insert/extraction process in previous versions of the program (https://github.com/ms4935/Forensic-Watermarking-program-for-image).
 
 # Development contents     
 **In the current era of illegal copying and distribution of various image-based creative works, we aim to produce a forensic watermarking program that contributes to tracking by expanding the existing watermark application method.** 
@@ -42,6 +41,7 @@ This document contains changes to the insert/extraction process in previous vers
 * In general, the watermark embedding method is divided into spatial domain insertion and frequency domain insertion. In order to secure the project goals of invisibility and JPEG compression robustness, the implementation proceeds with the frequency domain insertion method.
 
 * **Discrete wavelet transform(DWT)**: Binary wavelet transform is performed on the Y channel of the image obtained through color conversion to transform from the spatial domain to the frequency domain and insert. Through this, the image expressed by the pixel values ​​of the two-dimensional array is converted into an image expressed by the amount of change in the pixel values ​​of the two-dimensional array. That is, it is expressed as the amount of change in values ​​between adjacent pixels based on the position of a specific pixel. In addition, in the case of DWT, unlike general frequency conversion that includes only frequency (pixel value change) resolution, since it includes frequency resolution and resolution for the spatial domain (pixel value, corresponding location) to be converted, pixels at a specific location in the original image. The amount of change in values ​​can be expressed simultaneously.
+
 ![DWT](https://user-images.githubusercontent.com/13462458/74600613-57d52a80-50d7-11ea-9aa1-c079f1cd222b.PNG)
 
 As a result of DWT, four subbands LL, LH, HL, and HH can be obtained.     
